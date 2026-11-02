@@ -64,11 +64,38 @@ Solo si ya tienes Evolution API corriendo (lo vimos en clase).
    `AUTOFIX_SMTP_USER=<tu gmail>`, `AUTOFIX_SMTP_PASS=<la contraseña de aplicación>`
 4. Si tu app es Node: `npm i nodemailer`.
 
-### Webhook (n8n, Make, Zapier)
-1. En n8n: nodo **Webhook**, método POST → copia la **Production URL** y activa el workflow.
-2. `.env`: `AUTOFIX_WEBHOOK_URL=<url>`
-3. Llega un JSON con `event` (el error), `analysis` (la explicación), `report` y `text` (el mensaje listo).
-   Desde ahí lo mandas a donde quieras: Google Sheets, Notion, un CRM...
+### n8n: AutoFix Hub (un workflow listo, varios canales a la vez)
+Si prefieres que n8n haga el análisis y el envío (la app solo manda el error), importa `templates/n8n-autofix-hub.json`:
+1. En n8n: **Workflows → ⋯ → Import from File** → elige el JSON.
+2. Credencial **OpenRouter** (https://openrouter.ai/keys) y ponla en el nodo **OpenRouter**. El modelo se cambia en **Config**
+   (viene `anthropic/claude-sonnet-4.5`; cualquier modelo frontier sirve: `openai/gpt-5`, `google/gemini-2.5-pro`...).
+   Sin credencial el aviso llega igual, sin explicación.
+3. Nodo **Config**: rellena el destino de cada canal que uses (correo, chat id, número, topic de ntfy...).
+4. Enciende los canales: cada canal es un nodo; los que piden credencial vienen **desactivados**. Añade la credencial
+   (SMTP, Telegram, Slack, Discord, Twilio) y actívalo (clic derecho → **Enable**). Varios a la vez está bien.
+   **ntfy** viene encendido y no pide nada: instala la app ntfy en el celular, suscríbete al topic que pusiste y listo.
+5. **Publish** el workflow → abre el nodo **Webhook** → copia la **Production URL**.
+6. `.env` de tu app: `AUTOFIX_WEBHOOK_URL=<esa url>`. Puedes dejar `AUTOFIX_LLM` vacío: n8n pone la IA.
+
+Lo que manda n8n: el error tal cual sale en el log, fecha y hora, gravedad, por qué ocurre, cómo arreglarlo y la severidad
+final; por email va también el reporte `.md` adjunto. La **llamada** solo sale si la severidad es `high`
+(`call_only_if_high` en Config).
+
+| Canal | Qué necesita |
+|---|---|
+| Push al celular (ntfy) | Solo un nombre de topic difícil de adivinar. Gratis. |
+| Email | Credencial SMTP (Gmail: contraseña de aplicación, puerto 465 SSL o 587). |
+| Telegram | Credencial con el token del bot + `telegram_chat_id`. |
+| WhatsApp | Tu Evolution API: `evolution_url`, `evolution_instance`, `evolution_key`, `whatsapp_to`. |
+| Slack | Credencial Slack API (bot token) + `slack_channel`. |
+| Discord | Credencial Discord Webhook. |
+| SMS | Credencial Twilio + `twilio_from`, `phone_to`. |
+| Llamada | Credencial Basic Auth (usuario = Account SID, contraseña = Auth Token) + `twilio_sid`. Te lee el resumen con voz. |
+| Webhook saliente | `webhook_url`: Make, Zapier, Google Sheets, tu CRM... |
+
+### Webhook propio (Make, Zapier, otro n8n)
+1. `.env`: `AUTOFIX_WEBHOOK_URL=<url>`
+2. Llega un JSON con `event` (el error), `analysis` (la explicación), `report` y `text` (el mensaje listo).
 
 ## Probar
 Claude corre `--test` y luego `--demo`. Te debe llegar un aviso de prueba con la explicación de un error falso.

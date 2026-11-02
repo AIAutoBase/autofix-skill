@@ -115,7 +115,7 @@ Todas empiezan con `AUTOFIX_`. Si dejas una vacía, usa el valor por defecto.
 | `TELEGRAM_TOKEN`, `TELEGRAM_CHAT_ID` | Avisos por Telegram | — |
 | `WHATSAPP_URL`, `WHATSAPP_INSTANCE`, `WHATSAPP_KEY`, `WHATSAPP_TO` | Avisos por WhatsApp con tu propio Evolution API | — |
 | `SLACK_WEBHOOK`, `DISCORD_WEBHOOK` | Avisos a un canal | — |
-| `WEBHOOK_URL` | Mandar el error a n8n, Make o Zapier | — |
+| `WEBHOOK_URL` | Mandar el error a n8n (hay un workflow listo: `templates/n8n-autofix-hub.json`, ver SETUP.md), Make o Zapier | — |
 | `EMAIL_TO`, `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASS`, `SMTP_FROM` | Avisos por email (en Node necesita `npm i nodemailer`) | puerto 587 |
 | `RETENTION_DAYS` | Cuántos días guardar | 30 |
 | `MAX_ALERTS_PER_HOUR` | Tope de avisos por hora | 10 |
@@ -156,8 +156,11 @@ Todas empiezan con `AUTOFIX_`. Si dejas una vacía, usa el valor por defecto.
 Evolution API y email por SMTP. Dos apps de prueba con errores sembrados a propósito: una tienda en Next.js y un
 sistema de reservas en Flask. Los 5 errores llegaron explicados en español, incluidos los de la página web.
 
+El workflow **AutoFix Hub** para n8n (2.45) se probó con envíos reales por email (con el `.md` adjunto), Telegram,
+WhatsApp y push ntfy, con la explicación de Claude Sonnet 4.5 vía OpenRouter y también sin IA.
+
 **Sin probar:** instalar el skill en una computadora limpia y pedirlo por voz a Claude (ver arriba), Slack,
-Discord, webhook (n8n/Make/Zapier), email desde apps Node, Django y FastAPI.
+Discord, Make/Zapier, email desde apps Node, Django y FastAPI; en el workflow de n8n: Slack, Discord, SMS y llamada.
 
 **Cuéntanos en la comunidad** qué probaste y qué pasó. Con eso sacamos la próxima versión.
 

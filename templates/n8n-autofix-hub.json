@@ -1,0 +1,797 @@
+{
+  "name": "AutoFix Hub",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "autofix",
+        "options": {}
+      },
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        0,
+        300
+      ],
+      "webhookId": "autofix-hub"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "a1",
+              "name": "lang",
+              "value": "es",
+              "type": "string"
+            },
+            {
+              "id": "a2",
+              "name": "model",
+              "value": "anthropic/claude-sonnet-4.5",
+              "type": "string"
+            },
+            {
+              "id": "a3",
+              "name": "call_only_if_high",
+              "value": true,
+              "type": "boolean"
+            },
+            {
+              "id": "a4",
+              "name": "email_from",
+              "value": "autofix@tu-dominio.com",
+              "type": "string"
+            },
+            {
+              "id": "a5",
+              "name": "email_to",
+              "value": "tu@correo.com",
+              "type": "string"
+            },
+            {
+              "id": "a6",
+              "name": "telegram_chat_id",
+              "value": "",
+              "type": "string"
+            },
+            {
+              "id": "a7",
+              "name": "evolution_url",
+              "value": "http://localhost:8080",
+              "type": "string"
+            },
+            {
+              "id": "a8",
+              "name": "evolution_instance",
+              "value": "miapp",
+              "type": "string"
+            },
+            {
+              "id": "a9",
+              "name": "evolution_key",
+              "value": "",
+              "type": "string"
+            },
+            {
+              "id": "a10",
+              "name": "whatsapp_to",
+              "value": "17875551234",
+              "type": "string"
+            },
+            {
+              "id": "a11",
+              "name": "slack_channel",
+              "value": "#alertas",
+              "type": "string"
+            },
+            {
+              "id": "a12",
+              "name": "twilio_sid",
+              "value": "",
+              "type": "string"
+            },
+            {
+              "id": "a13",
+              "name": "twilio_from",
+              "value": "+1...",
+              "type": "string"
+            },
+            {
+              "id": "a14",
+              "name": "phone_to",
+              "value": "+1...",
+              "type": "string"
+            },
+            {
+              "id": "a15",
+              "name": "ntfy_topic",
+              "value": "autofix-cambia-este-nombre",
+              "type": "string"
+            },
+            {
+              "id": "a16",
+              "name": "webhook_url",
+              "value": "https://...",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "name": "Config",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        220,
+        300
+      ],
+      "notes": "1) Rellena aquí los destinos de los canales que uses. 2) Activa (enable) el nodo de cada canal que quieras; vienen apagados los que piden credencial. 3) Las claves (OpenRouter, SMTP, Telegram, Slack, Discord, Twilio) van en Credentials de n8n.",
+      "notesInFlow": true
+    },
+    {
+      "parameters": {
+        "jsCode": "// 1-2-3: the error as logged, when, and the severity the app reported. No AI here.\nconst cfg = $('Config').first().json;\nconst b = $('Webhook').first().json.body || {};\nconst ev = b.event || {};\nconst a = b.analysis || {};\nconst lang = (cfg.lang || 'es').toLowerCase().startsWith('en') ? 'en' : 'es';\nconst L = lang === 'en'\n  ? { h1: 'Error (exactly as it appears in the log)', src: 'Where', h2: 'Date and time', h3: 'Severity (reported by the app)', tbd: 'to be determined' }\n  : { h1: 'Error (tal como aparece en el log)', src: 'Origen', h2: 'Fecha y hora', h3: 'Gravedad (reportada por la app)', tbd: 'por determinar' };\nconst error = ev.error || b.text || JSON.stringify(b);\nconst ts = ev.ts || new Date().toISOString();\nconst severity_in = a.severity || L.tbd;\nconst app = ev.app || 'app', host = ev.host || '?', source = ev.source || '?';\nconst md123 = [\n  `# AutoFix · ${app} (${host})`, '',\n  `## 1. ${L.h1}`, `- ${L.src}: ${source}`, '```', error, '```', '',\n  `## 2. ${L.h2}`, ts, '',\n  `## 3. ${L.h3}`, severity_in,\n].join('\\n');\nreturn [{ json: { app, host, source, ts, error, severity_in, summary_in: a.summary || '', lang, md123 } }];"
+      },
+      "name": "Reporte 1-2-3",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        440,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=You are a senior support engineer. A beginner built this app and AutoFix caught an error. Read the report below and reply ONLY with a JSON object with these keys: \"cause\" (2-3 sentences: why this error happens), \"fix\" (3-6 numbered concrete steps to fix it, with commands or file names when useful, as one string with line breaks), \"severity\" (\"high\" if users are blocked or data is at risk, \"medium\" if a feature fails, \"low\" if cosmetic or noisy). Write cause and fix in the language with code {{ $json.lang }}. Do not invent file paths; if unsure, say so.\n\n{{ $json.md123 }}",
+        "hasOutputParser": true
+      },
+      "name": "Análisis AI",
+      "type": "@n8n/n8n-nodes-langchain.chainLlm",
+      "typeVersion": 1.7,
+      "position": [
+        660,
+        300
+      ],
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "model": "={{ $('Config').first().json.model }}",
+        "options": {}
+      },
+      "name": "OpenRouter",
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenRouter",
+      "typeVersion": 1,
+      "position": [
+        620,
+        520
+      ]
+    },
+    {
+      "parameters": {
+        "jsonSchemaExample": "{\"cause\": \"why it happens\", \"fix\": \"1. ...\\n2. ...\", \"severity\": \"high\"}"
+      },
+      "name": "JSON 4-5-6",
+      "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
+      "typeVersion": 1.2,
+      "position": [
+        800,
+        520
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// 4-5-6 from the AI (or a plain note if the AI step failed), then one item per channel; disabled channel nodes just drop theirs.\nconst cfg = $('Config').first().json;\nconst r = $('Reporte 1-2-3').first().json;\nconst out = ($json.output && typeof $json.output === 'object') ? $json.output : null;\nconst severity = ((out && out.severity) || r.severity_in || 'medium').toLowerCase();\nconst L = r.lang === 'en'\n  ? { why: 'Why it happens', fix: 'Recommended fix', sev: 'Severity', noai: 'No AI analysis (check the OpenRouter credential in n8n).', call: 'AutoFix alert for' }\n  : { why: 'Por qué ocurre', fix: 'Recomendación para arreglarlo', sev: 'Severidad', noai: 'Sin análisis de AI (revisa la credencial de OpenRouter en n8n).', call: 'Alerta de AutoFix para' };\nconst cause = out ? String(out.cause) : L.noai;\nconst fix = out ? String(out.fix) : '';\nconst md = `${r.md123}\\n\\n## 4. ${L.why}\\n${cause}\\n\\n## 5. ${L.fix}\\n${fix}\\n\\n## 6. ${L.sev}\\n${severity}\\n`;\nconst icon = { high: '🔴', medium: '🟡', low: '🟢' }[severity] || '⚪';\nconst firstLine = r.error.split('\\n')[0].slice(0, 100);\nconst title = `AutoFix - ${r.app}: ${firstLine}`;   // ASCII only: it travels in an HTTP header (ntfy)\nconst text = `${icon} AutoFix · ${r.app} (${r.host})\\n${L.sev}: ${severity}\\n${r.ts}\\n\\n${r.error.slice(0, 400)}\\n\\n${L.why}: ${cause}\\n\\n${L.fix}:\\n${fix}`.slice(0, 3800);\nconst say = `${L.call} ${r.app}. ${L.sev} ${severity}. ${cause}`.slice(0, 600)\n  .replace(/[<>&\"']/g, c => ({ '<': '&lt;', '>': '&gt;', '&': '&amp;', '\"': '&quot;', \"'\": '&apos;' }[c]));\nconst fileName = `autofix-${r.app}-${r.ts.replace(/[:T]/g, '-').slice(0, 19)}.md`;\nconst html = text.replace(/[&<>]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c]));   // Telegram parse_mode=HTML; its Markdown chokes on backticks\nconst base = { app: r.app, host: r.host, ts: r.ts, severity, title, subject: `${icon} ${title}`, text, html, md, say, fileName };\nconst items = [];\nfor (const ch of ['email', 'telegram', 'whatsapp', 'slack', 'discord', 'sms', 'call', 'ntfy', 'webhook']) {\n  if (ch === 'call' && cfg.call_only_if_high && severity !== 'high') continue;\n  const it = { json: { ...base, channel: ch } };\n  if (ch === 'email') it.binary = { report: { data: Buffer.from(md, 'utf8').toString('base64'), mimeType: 'text/markdown', fileName } };\n  items.push(it);\n}\nreturn items;"
+      },
+      "name": "Reporte final",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1040,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "c-email",
+                    "leftValue": "={{ $json.channel }}",
+                    "rightValue": "email",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "email"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "c-telegram",
+                    "leftValue": "={{ $json.channel }}",
+                    "rightValue": "telegram",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "telegram"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "c-whatsapp",
+                    "leftValue": "={{ $json.channel }}",
+                    "rightValue": "whatsapp",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "whatsapp"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "c-slack",
+                    "leftValue": "={{ $json.channel }}",
+                    "rightValue": "slack",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "slack"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "c-discord",
+                    "leftValue": "={{ $json.channel }}",
+                    "rightValue": "discord",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "discord"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "c-sms",
+                    "leftValue": "={{ $json.channel }}",
+                    "rightValue": "sms",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "sms"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "c-call",
+                    "leftValue": "={{ $json.channel }}",
+                    "rightValue": "call",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "call"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "c-ntfy",
+                    "leftValue": "={{ $json.channel }}",
+                    "rightValue": "ntfy",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "ntfy"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "c-webhook",
+                    "leftValue": "={{ $json.channel }}",
+                    "rightValue": "webhook",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "webhook"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "name": "Canales",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.2,
+      "position": [
+        1260,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "fromEmail": "={{ $('Config').first().json.email_from }}",
+        "toEmail": "={{ $('Config').first().json.email_to }}",
+        "subject": "={{ $json.subject }}",
+        "emailFormat": "text",
+        "text": "={{ $json.md }}",
+        "options": {
+          "attachments": "report",
+          "appendAttribution": false
+        }
+      },
+      "name": "Email",
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2.1,
+      "position": [
+        1540,
+        20
+      ],
+      "onError": "continueRegularOutput",
+      "disabled": true
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $('Config').first().json.telegram_chat_id }}",
+        "text": "={{ $json.html }}",
+        "additionalFields": {
+          "appendAttribution": false,
+          "parse_mode": "HTML"
+        }
+      },
+      "name": "Telegram",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        1540,
+        160
+      ],
+      "onError": "continueRegularOutput",
+      "disabled": true
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $('Config').first().json.evolution_url }}/message/sendText/{{ $('Config').first().json.evolution_instance }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "apikey",
+              "value": "={{ $('Config').first().json.evolution_key }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ number: $('Config').first().json.whatsapp_to, text: $json.text }) }}",
+        "options": {}
+      },
+      "name": "WhatsApp (Evolution)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1540,
+        300
+      ],
+      "onError": "continueRegularOutput",
+      "disabled": true
+    },
+    {
+      "parameters": {
+        "select": "channel",
+        "channelId": {
+          "__rl": true,
+          "mode": "name",
+          "value": "={{ $('Config').first().json.slack_channel }}"
+        },
+        "text": "={{ $json.text }}",
+        "otherOptions": {
+          "includeLinkToWorkflow": false
+        }
+      },
+      "name": "Slack",
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2.3,
+      "position": [
+        1540,
+        440
+      ],
+      "onError": "continueRegularOutput",
+      "disabled": true
+    },
+    {
+      "parameters": {
+        "authentication": "webhook",
+        "content": "={{ $json.text.slice(0, 1900) }}",
+        "options": {}
+      },
+      "name": "Discord",
+      "type": "n8n-nodes-base.discord",
+      "typeVersion": 2,
+      "position": [
+        1540,
+        580
+      ],
+      "onError": "continueRegularOutput",
+      "disabled": true
+    },
+    {
+      "parameters": {
+        "from": "={{ $('Config').first().json.twilio_from }}",
+        "to": "={{ $('Config').first().json.phone_to }}",
+        "message": "={{ $json.text.slice(0, 1500) }}"
+      },
+      "name": "SMS (Twilio)",
+      "type": "n8n-nodes-base.twilio",
+      "typeVersion": 1,
+      "position": [
+        1540,
+        720
+      ],
+      "onError": "continueRegularOutput",
+      "disabled": true
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://api.twilio.com/2010-04-01/Accounts/{{ $('Config').first().json.twilio_sid }}/Calls.json",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpBasicAuth",
+        "sendBody": true,
+        "contentType": "form-urlencoded",
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "From",
+              "value": "={{ $('Config').first().json.twilio_from }}"
+            },
+            {
+              "name": "To",
+              "value": "={{ $('Config').first().json.phone_to }}"
+            },
+            {
+              "name": "Twiml",
+              "value": "=<Response><Say language=\"{{ $('Config').first().json.lang === 'en' ? 'en-US' : 'es-MX' }}\">{{ $json.say }}</Say></Response>"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "name": "Llamada (Twilio)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1540,
+        860
+      ],
+      "onError": "continueRegularOutput",
+      "disabled": true
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://ntfy.sh/{{ $('Config').first().json.ntfy_topic }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Title",
+              "value": "={{ $json.title }}"
+            },
+            {
+              "name": "Priority",
+              "value": "={{ $json.severity === 'high' ? '5' : '3' }}"
+            },
+            {
+              "name": "Tags",
+              "value": "={{ $json.severity === 'high' ? 'rotating_light' : 'warning' }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "raw",
+        "rawContentType": "text/plain; charset=utf-8",
+        "body": "={{ $json.text }}",
+        "options": {}
+      },
+      "name": "Push (ntfy)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1540,
+        1000
+      ],
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $('Config').first().json.webhook_url }}",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ app: $json.app, host: $json.host, ts: $json.ts, severity: $json.severity, title: $json.title, text: $json.text, md: $json.md }) }}",
+        "options": {}
+      },
+      "name": "Webhook saliente",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1540,
+        1140
+      ],
+      "onError": "continueRegularOutput",
+      "disabled": true
+    }
+  ],
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Config",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Config": {
+      "main": [
+        [
+          {
+            "node": "Reporte 1-2-3",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Reporte 1-2-3": {
+      "main": [
+        [
+          {
+            "node": "Análisis AI",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenRouter": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Análisis AI",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "JSON 4-5-6": {
+      "ai_outputParser": [
+        [
+          {
+            "node": "Análisis AI",
+            "type": "ai_outputParser",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Análisis AI": {
+      "main": [
+        [
+          {
+            "node": "Reporte final",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Reporte final": {
+      "main": [
+        [
+          {
+            "node": "Canales",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Canales": {
+      "main": [
+        [
+          {
+            "node": "Email",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Telegram",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "WhatsApp (Evolution)",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Slack",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Discord",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "SMS (Twilio)",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Llamada (Twilio)",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Push (ntfy)",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Webhook saliente",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "meta": {
+    "templateCredsSetupCompleted": false
+  }
+}

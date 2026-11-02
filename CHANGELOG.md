@@ -7,6 +7,12 @@ Versioning: [SemVer](https://semver.org).
 
 <!-- CHANGELOG:ENTRIES -->
 
+## [0.3.0] - 2026-11-02
+
+### Added
+- n8n AutoFix Hub workflow - frontier-model analysis and alerts by email, Telegram, WhatsApp, Slack, Discord, SMS, call, ntfy push, webhook; Skool launch texts
+
+
 ## [0.2.0] - 2026-10-30
 
 ### Added
@@ -30,6 +36,7 @@ Versioning: [SemVer](https://semver.org).
 ### Added
 - AutoFix skill: 30-day error log, AI explanation (Anthropic, OpenAI, OpenRouter, Ollama), alerts (Telegram, WhatsApp/Evolution, Slack, Discord, email, webhook), .md fix reports and the "autofix" fix mode.
 - Templates for Python (`autofix.py`) and Node (`autofix.cjs`), browser snippet, `env.example`, Spanish `SETUP.md` and `README.md`.
+
 
 
 

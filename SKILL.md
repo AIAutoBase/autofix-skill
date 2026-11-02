@@ -61,6 +61,9 @@ Append the `env.example` block to the app's `.env` (keep existing values). Then 
    No key at all is fine: alerts still arrive without the explanation.
 2. **Where do you want the alerts?** Recommend **Telegram** (free, 3 minutes). Others: WhatsApp via Evolution API
    (only if they already run Evolution), Slack, Discord, email, webhook (n8n/Make/Zapier). Several at once is fine.
+   If they have n8n: `templates/n8n-autofix-hub.json` is a ready workflow (import, add OpenRouter credential, enable the
+   channel nodes they want: email with the .md attached, Telegram, WhatsApp, Slack, Discord, SMS, phone call, ntfy push,
+   webhook). Then only `AUTOFIX_WEBHOOK_URL` is needed in `.env`; `AUTOFIX_LLM` can stay empty. Steps in `SETUP.md`.
 3. **Spanish or English explanations?** (`AUTOFIX_LANG`, default `es`).
 
 Walk them through getting each value with `SETUP.md`, one step at a time; have them paste the value, write it

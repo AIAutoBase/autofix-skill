@@ -4,7 +4,7 @@ Un skill para Claude Code. Le dices **"ponle autofix a mi app"** y Claude:
 
 - guarda todos los errores de tu app durante 30 días,
 - le pide a una IA (Claude Haiku, ChatGPT, OpenRouter u Ollama gratis) que explique cada error nuevo en palabras simples,
-- te avisa por Telegram, WhatsApp, Slack, Discord, email o n8n,
+- te avisa por Telegram, WhatsApp, Slack, Discord, email o n8n (con un workflow listo que añade push al celular, SMS y llamada),
 - y deja un reporte. Cuando escribes **"autofix"** en Claude Code, lo arregla por ti.
 
 Funciona con apps en **Node.js** y **Python**, y con sus páginas web.
@@ -61,14 +61,22 @@ Para apagarlo: `AUTOFIX_ENABLED=0` en el `.env`.
 ## Qué está probado
 - **IAs:** Claude Haiku, ChatGPT, OpenRouter y Ollama local, con envíos reales.
 - **Avisos:** Telegram, WhatsApp (Evolution API) y email, con envíos reales.
+- **n8n:** el workflow `templates/n8n-autofix-hub.json` con email (+ reporte adjunto), Telegram, WhatsApp y push ntfy, con y sin IA.
 - **Apps:** una tienda en Next.js y un sistema de reservas en Flask con 5 errores sembrados; los 5 llegaron explicados en español.
-- **Sin probar todavía:** instalarlo como skill en una computadora limpia (ver arriba), Slack, Discord, webhook (n8n/Make/Zapier), email desde apps Node, Django y FastAPI.
+- **Sin probar todavía:** instalarlo como skill en una computadora limpia (ver arriba), Slack, Discord, Make/Zapier, email desde apps Node, Django y FastAPI; en n8n: Slack, Discord, SMS y llamada.
 
 ---
 
 ## 📋 Latest Changes
 
 <!-- LATEST:BEGIN -->
+## [0.3.0] - 2026-11-02
+
+### Added
+- n8n AutoFix Hub workflow - frontier-model analysis and alerts by email, Telegram, WhatsApp, Slack, Discord, SMS, call, ntfy push, webhook; Skool launch texts
+
+
+
 ## [0.2.0] - 2026-10-30
 
 ### Added
@@ -98,6 +106,7 @@ Para apagarlo: `AUTOFIX_ENABLED=0` en el `.env`.
 <!-- LATEST:END -->
 
 See full [CHANGELOG.md](CHANGELOG.md) for complete history.
+
 
 
 
